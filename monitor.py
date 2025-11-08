@@ -2,7 +2,8 @@ from scapy.all import sniff, IP, TCP, UDP, ICMP
 from datetime import datetime
 from colorama import Fore, Style, init
 from collections import defaultdict
-import csv, os
+import csv
+import os
 
 init(autoreset=True)
 
@@ -25,7 +26,7 @@ ALERT_THRESHOLD = 20
 SUSPICIOS_PORTS = {22, 23, 3389, 5900, 8080}
 
 OUTPUT_FILE =  "captures/networl_events.csv" # Carpeta de salida
-os.mkdir("captures", exist_ok=True) # Crear la carpeta si no existe
+os.makedirs("captures", exist_ok=True) # Crear la carpeta si no existe
 
 # Crear el archivo CSV si no existe
 if not os.path.exists(OUTPUT_FILE):
