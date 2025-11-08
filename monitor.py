@@ -24,7 +24,7 @@ def packet_callback(packet):
             proto_name = "UDP"
         else:
             sport = dport = "-"
-            prono_name = str(proto)
+            proto_name = str(proto)
             
         print(
             f"{Fore.CYAN}[{time}] {Fore.GREEN}{ip_src} : {sport} "
