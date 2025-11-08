@@ -36,6 +36,7 @@ if not os.path.exists(OUTPUT_FILE):
         
 """Guardar eventos en el archivo SCV"""
 def log_event(timestamp, src, dst, proto, sport, dport, event):
+    event_str = ", ".join(event) if isinstance(event, list) else event
     with open(OUTPUT_FILE, mode="a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([timestamp, src, dst, proto, sport, dport, event])
@@ -66,27 +67,35 @@ def packet_callback(packet):
             f"{Fore.MAGENTA}[{proto_name}]"
         )
         
-        event_desc = "Trafico normal"
+        event_list = ["Trafico normal"]
         
         # --- Detección: multiples conexiones ---
-        connection_count[ip_src] += 1
-        if connection_count[ip_src] > ALERT_THRESHOLD:
-            event_desc = f"Posible escaneo de puertos ({connection_count[ip_src]} conexiones)"
-            print(f"{Fore.RED}[ALERTA]{event_desc} desde {ip_src}")
-            
-            
+        is_syn = TCP in packet and (packet[TCP].flags & 0x02) # Verifica si es un SYN
+        
+        if is_syn:
+            connection_count[ip_src] += 1
+            if connection_count[ip_src] > ALERT_THRESHOLD:
+                # Alerta crítica: Sobrescribe el valor de "Trafico normal"
+                event_list[0] = f"Posible escaneo de puertos ({connection_count[ip_src]} conexiones)"
+                print(f"{Fore.RED}[ALERTA] {event_list[0]} desde {ip_src}")
+                        
         # --- Detección: escaneo de puertos delicados ---
-        if dport != "-" and int(dport) in SUSPICIOS_PORTS:
-            event_desc = f"Conexión hacia puerto sensible {dport}"
-            print(f"{Fore.YELLOW}[ADVERTENCIA] {event_desc} desde {ip_src}")
+        if dport != "-" and dport in SUSPICIOS_PORTS:
+            # Agrega un evento adicional a la lista
+            event_list.append(f"Conexión hacia puerto sensible {dport}")
+            print(f"{Fore.YELLOW}[ADVERTENCIA] Conexión hacia puerto sensible {dport} desde {ip_src}")
             
         # --- Detección trafico ICMP ---
         if ICMP in packet:
             event_desc = "Tráfico ICMP detectado"
             print(f"{Fore.BLUE}[INFO] {event_desc} entre {ip_src} y {ip_dst}")
             
+        # Si la lista contiene la descripción por defecto, y hay otras más importantes, la eliminamos
+        if len(event_list) > 1 and "Trafico normal" in event_list:
+            event_list.remove("Trafico normal")
+            
         # Guardar evento
-        log_event(time, ip_src, ip_dst, proto_name, sport, dport, event_desc)
+        log_event(time, ip_src, ip_dst, proto_name, sport, dport, event_list)
         
         
 def main():
@@ -94,12 +103,11 @@ def main():
     print(Fore.WHITE + " Capturando trafico de red ... (Ctrl + C para detener)\n")
         
     try:
-        sniff(prn=packet_callback, store=False)
+        sniff(prn=packet_callback, store=False) 
     except KeyboardInterrupt:
         print(Fore.RED + "\n\nFinalizando monitoreo...")
         print(Fore.GREEN + f"Total de IPs analizadas: {len(connection_count)}")
-        print(Fore.WHITE + f"Resultados guardados en : {OUTPUT_FILE}")
-        
+        print(Fore.WHITE + f"Resultados guardados en : {OUTPUT_FILE}")        
             
 if __name__ == "__main__":
     main()
