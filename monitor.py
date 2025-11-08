@@ -23,9 +23,9 @@ connection_count = defaultdict(int)
 ALERT_THRESHOLD = 20
 
 # Lista de puertos a vigilar (posibles accesos maliciosos)
-SUSPICIOS_PORTS = {22, 23, 3389, 5900, 8080}
+SUSPICIOUS_PORTS = {22, 23, 3389, 5900, 8080}
 
-OUTPUT_FILE =  "captures/networl_events.csv" # Carpeta de salida
+OUTPUT_FILE =  "captures/network_events.csv" # Carpeta de salida
 os.makedirs("captures", exist_ok=True) # Crear la carpeta si no existe
 
 # Crear el archivo CSV si no existe
@@ -39,7 +39,7 @@ def log_event(timestamp, src, dst, proto, sport, dport, event):
     event_str = ", ".join(event) if isinstance(event, list) else event
     with open(OUTPUT_FILE, mode="a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([timestamp, src, dst, proto, sport, dport, event])
+        writer.writerow([timestamp, src, dst, proto, sport, dport, event_str])
         
 
 """Esta función se llama cada vez que se detecta un paquete"""
@@ -80,7 +80,7 @@ def packet_callback(packet):
                 print(f"{Fore.RED}[ALERTA] {event_list[0]} desde {ip_src}")
                         
         # --- Detección: escaneo de puertos delicados ---
-        if dport != "-" and dport in SUSPICIOS_PORTS:
+        if dport != "-" and dport in SUSPICIOUS_PORTS:
             # Agrega un evento adicional a la lista
             event_list.append(f"Conexión hacia puerto sensible {dport}")
             print(f"{Fore.YELLOW}[ADVERTENCIA] Conexión hacia puerto sensible {dport} desde {ip_src}")
